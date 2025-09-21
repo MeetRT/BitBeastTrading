@@ -1,0 +1,170 @@
+@page "/watchlist"
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
+@inject WatchlistStore WatchlistStore
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Watchlist - EquityEdge</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Watchlist</h2>
+            
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    @successMessage
+                    <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Your Symbols</h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@watchlistModel" OnValidSubmit="@SaveWatchlist">
+                        <div class="mb-3">
+                            <label for="symbols" class="form-label">Symbols (comma-separated)</label>
+                            <textarea id="symbols" class="form-control watchlist-textarea" 
+                                    @bind="watchlistModel.SymbolsText" 
+                                    placeholder="Enter symbols separated by commas, e.g., RELIANCE, TCS, INFY"></textarea>
+                            <div class="form-text">
+                                Enter trading symbols separated by commas. Example: RELIANCE, TCS, INFY, HDFC, ICICIBANK
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                Save Watchlist
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="LoadWatchlist">
+                                Reload
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            @if (currentSymbols.Any())
+            {
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Current Symbols (@currentSymbols.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var symbol in currentSymbols)
+                            {
+                                <div class="col-md-3 mb-2">
+                                    <span class="badge bg-primary">@symbol</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Popular Symbols</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Click to add to your watchlist:</p>
+                    @foreach (var symbol in popularSymbols)
+                    {
+                        <button class="btn btn-outline-secondary btn-sm me-2 mb-2" 
+                                @onclick="() => AddSymbol(symbol)">
+                            @symbol
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private WatchlistModel watchlistModel = new();
+    private List<string> currentSymbols = new();
+    private bool isLoading = false;
+    private string successMessage = string.Empty;
+    private string userEmail = string.Empty;
+
+    private readonly string[] popularSymbols = new[]
+    {
+        "RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK", "HDFCBANK", "ITC", "SBIN", "BHARTIARTL", "KOTAKBANK",
+        "LT", "ASIANPAINT", "MARUTI", "AXISBANK", "HCLTECH", "BAJFINANCE", "WIPRO", "ULTRACEMCO", "NESTLEIND", "POWERGRID"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userEmail = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+        
+        await LoadWatchlist();
+    }
+
+    private async Task LoadWatchlist()
+    {
+        try
+        {
+            currentSymbols = WatchlistStore.GetWatchlist(userEmail);
+            watchlistModel.SymbolsText = string.Join(", ", currentSymbols);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading watchlist: {ex.Message}");
+        }
+    }
+
+    private async Task SaveWatchlist()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var symbols = watchlistModel.SymbolsText
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim().ToUpper())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct()
+                .ToList();
+
+            WatchlistStore.SaveWatchlist(userEmail, symbols);
+            currentSymbols = symbols;
+            
+            successMessage = $"Watchlist saved successfully! ({symbols.Count} symbols)";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving watchlist: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void AddSymbol(string symbol)
+    {
+        if (!currentSymbols.Contains(symbol))
+        {
+            var symbols = new List<string>(currentSymbols) { symbol };
+            watchlistModel.SymbolsText = string.Join(", ", symbols);
+        }
+    }
+
+    public class WatchlistModel
+    {
+        public string SymbolsText { get; set; } = string.Empty;
+    }
+}

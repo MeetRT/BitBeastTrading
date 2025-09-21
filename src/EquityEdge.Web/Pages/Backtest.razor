@@ -1,0 +1,179 @@
+@page "/backtest"
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
+@inject BacktestService BacktestService
+
+<PageTitle>Backtest - EquityEdge</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h2>Backtest</h2>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    @errorMessage
+                    <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Historical Data Analysis</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-end mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Symbol</label>
+                            <select class="form-select" @bind="selectedToken">
+                                <option value="884737">RELIANCE (884737)</option>
+                                <option value="408065">TCS (408065)</option>
+                                <option value="408064">INFY (408064)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Days Back</label>
+                            <select class="form-select" @bind="daysBack">
+                                <option value="1">1 Day</option>
+                                <option value="5">5 Days</option>
+                                <option value="10">10 Days</option>
+                                <option value="30">30 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Interval</label>
+                            <select class="form-select" @bind="interval">
+                                <option value="5minute">5 Minute</option>
+                                <option value="15minute">15 Minute</option>
+                                <option value="hour">1 Hour</option>
+                                <option value="day">Daily</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" @onclick="RunBacktest" disabled="@isRunning">
+                                @if (isRunning)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                }
+                                Run
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (backtestResults.Any())
+            {
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Results (@backtestResults.Count bars)</h5>
+                        <small class="text-muted">Last updated: @lastUpdateTime.ToString("HH:mm:ss")</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="backtest-results">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Open</th>
+                                            <th>High</th>
+                                            <th>Low</th>
+                                            <th>Close</th>
+                                            <th>Volume</th>
+                                            <th>Change</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var bar in backtestResults.OrderByDescending(b => b.TimeStamp).Take(100))
+                                        {
+                                            var change = bar.Close - bar.Open;
+                                            var changePercent = bar.Open > 0 ? (change / bar.Open) * 100 : 0;
+                                            var changeClass = change >= 0 ? "text-success" : "text-danger";
+                                            
+                                            <tr>
+                                                <td>@bar.TimeStamp.ToString("dd/MM HH:mm")</td>
+                                                <td>₹@bar.Open.ToString("F2")</td>
+                                                <td>₹@bar.High.ToString("F2")</td>
+                                                <td>₹@bar.Low.ToString("F2")</td>
+                                                <td>₹@bar.Close.ToString("F2")</td>
+                                                <td>@bar.Volume.ToString("N0")</td>
+                                                <td class="@changeClass">
+                                                    @(change >= 0 ? "+" : "")@change.ToString("F2") 
+                                                    (@(changePercent >= 0 ? "+" : "")@changePercent.ToString("F2")%)
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        @if (backtestResults.Count > 100)
+                        {
+                            <div class="text-center mt-3">
+                                <small class="text-muted">Showing latest 100 of @backtestResults.Count results</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<EquityEdge.Web.Services.Historical> backtestResults = new();
+    private bool isRunning = false;
+    private string errorMessage = string.Empty;
+    private DateTime lastUpdateTime = DateTime.Now;
+    
+    private uint selectedToken = 884737; // RELIANCE
+    private int daysBack = 5;
+    private string interval = "5minute";
+
+    private async Task RunBacktest()
+    {
+        try
+        {
+            isRunning = true;
+            errorMessage = string.Empty;
+            backtestResults.Clear();
+
+            // Get access token
+            var tokenResult = await JSRuntime.InvokeAsync<TokenResult>("fetchKiteToken");
+            
+            if (tokenResult?.Token == null)
+            {
+                errorMessage = "Kite not connected. Please go to Settings to connect your account.";
+                return;
+            }
+
+            var fromDate = DateTime.Now.Date.AddDays(-daysBack);
+            var toDate = DateTime.Now.Date;
+
+            var results = await BacktestService.GetBars(tokenResult.Token, selectedToken, interval, fromDate, toDate);
+            backtestResults = results;
+            lastUpdateTime = DateTime.Now;
+
+            if (!backtestResults.Any())
+            {
+                errorMessage = "No data available for the selected parameters.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error running backtest: {ex.Message}";
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+
+    public class TokenResult
+    {
+        public string? Token { get; set; }
+    }
+}
