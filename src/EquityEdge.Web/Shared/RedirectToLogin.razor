@@ -1,0 +1,14 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<AuthorizeView>
+    <NotAuthorized>
+        @{
+            var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+            Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "P4ePKs9RBaaKc01M+lX353YX7/1KhNlGGYboxTo+IQT0qE+Jl2WCH7qLARbvUd3L8RlnQTpWnUfwjhOlcZztUA==",
+  "success": true,
+  "projectFilePath": "/home/runner/work/BitBeastTrading/BitBeastTrading/src/EquityEdge.Web/EquityEdge.Web.csproj",
+  "expectedPackageFiles": [
+    "/home/runner/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "dwYDQo3pmC3NJrw9UhANBevaKfFJWG88/cA3wU1TWd0=",
+  "Source": "EquityEdge.Web",
+  "BasePath": "_content/EquityEdge.Web",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "EquityEdge.Web/wwwroot",
+      "Source": "EquityEdge.Web",
+      "ContentRoot": "/home/runner/work/BitBeastTrading/BitBeastTrading/src/EquityEdge.Web/wwwroot/",
+      "BasePath": "_content/EquityEdge.Web",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/home/runner/work/BitBeastTrading/BitBeastTrading/src/EquityEdge.Web/wwwroot/css/site.css",
+      "SourceId": "EquityEdge.Web",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/runner/work/BitBeastTrading/BitBeastTrading/src/EquityEdge.Web/wwwroot/",
+      "BasePath": "_content/EquityEdge.Web",
+      "RelativePath": "css/site.css",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/css/site.css"
+    }
+  ]
+}

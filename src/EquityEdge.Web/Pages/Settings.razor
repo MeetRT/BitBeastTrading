@@ -1,0 +1,162 @@
+@page "/settings"
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Settings - EquityEdge</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Settings</h2>
+            
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    @successMessage
+                    <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    @errorMessage
+                    <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Zerodha Kite Integration</h4>
+                </div>
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Checking Kite connection...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5>Status: 
+                                    @if (kiteStatus.Linked)
+                                    {
+                                        <span class="badge bg-success">Connected</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Not Connected</span>
+                                    }
+                                </h5>
+                                @if (kiteStatus.Linked)
+                                {
+                                    <p class="text-muted mb-0">Your Zerodha account is connected and ready for trading.</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">Connect your Zerodha account to enable live data and trading features.</p>
+                                }
+                            </div>
+                            <div class="col-md-4">
+                                @if (!kiteStatus.Linked)
+                                {
+                                    <button class="btn btn-primary" @onclick="ConnectKite">
+                                        Connect Kite
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-success" disabled>
+                                        ✓ Connected
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4 class="mb-0">Account Information</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> @kiteStatus.Email</p>
+                    <p class="text-muted">This is your EquityEdge account email address.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private KiteStatusResult kiteStatus = new();
+    private bool isLoading = true;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadKiteStatus();
+        CheckUrlParameters();
+    }
+
+    private void CheckUrlParameters()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        
+        if (query["success"] == "true")
+        {
+            successMessage = "Kite account connected successfully!";
+        }
+        else if (!string.IsNullOrEmpty(query["error"]))
+        {
+            errorMessage = query["error"] switch
+            {
+                "auth_failed" => "Kite authentication failed. Please try again.",
+                "token_exchange_failed" => "Failed to exchange token. Please try again.",
+                _ => "An error occurred during Kite connection."
+            };
+        }
+    }
+
+    private async Task LoadKiteStatus()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await JSRuntime.InvokeAsync<KiteStatusResult>("fetchKiteStatus");
+            
+            if (result != null)
+            {
+                kiteStatus = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load Kite status.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConnectKite()
+    {
+        Navigation.NavigateTo("/kite/login", forceLoad: true);
+    }
+
+    public class KiteStatusResult
+    {
+        public string Email { get; set; } = string.Empty;
+        public bool Linked { get; set; } = false;
+    }
+}

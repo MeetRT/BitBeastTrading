@@ -1,0 +1,162 @@
+@page "/"
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
+@inject LiveInterop LiveInterop
+@implements IDisposable
+
+<PageTitle>Live Monitor - EquityEdge</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2>Live Monitor</h2>
+            
+            @if (!isKiteLinked)
+            {
+                <div class="alert alert-warning">
+                    <strong>Kite not linked!</strong> Please go to <a href="/settings">Settings</a> to connect your Zerodha account.
+                </div>
+            }
+            else if (string.IsNullOrEmpty(accessToken))
+            {
+                <div class="alert alert-info">
+                    Loading Kite connection...
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    @if (!isFeedStarted)
+                    {
+                        <button class="btn btn-success" @onclick="StartFeed">Start Feed</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-danger" @onclick="StopFeed">Stop Feed</button>
+                    }
+                    <small class="text-muted ms-2">Tracking: RELIANCE (884737)</small>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (isFeedStarted)
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <h4>Live Tick Feed</h4>
+                <div class="tick-feed">
+                    @foreach (var tick in tickLines.TakeLast(50))
+                    {
+                        <div>@tick</div>
+                    }
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h4>Minute Bars</h4>
+                <div class="minute-bars">
+                    @foreach (var bar in minuteBars.Values.OrderByDescending(b => b.Time).Take(10))
+                    {
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between">
+                                    <small><strong>@bar.Time.ToString("HH:mm")</strong></small>
+                                    <small>Vol: @bar.Volume.ToString("N0")</small>
+                                </div>
+                                <div class="row">
+                                    <div class="col-3"><small>O: ₹@bar.Open.ToString("F2")</small></div>
+                                    <div class="col-3"><small>H: ₹@bar.High.ToString("F2")</small></div>
+                                    <div class="col-3"><small>L: ₹@bar.Low.ToString("F2")</small></div>
+                                    <div class="col-3"><small>C: ₹@bar.Close.ToString("F2")</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isKiteLinked = false;
+    private string accessToken = string.Empty;
+    private bool isFeedStarted = false;
+    private List<string> tickLines = new();
+    private Dictionary<long, MinuteBar> minuteBars = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckKiteStatus();
+    }
+
+    private async Task CheckKiteStatus()
+    {
+        try
+        {
+            var meResult = await JSRuntime.InvokeAsync<KiteMeResult>("fetchKiteStatus");
+            isKiteLinked = meResult?.Linked == true;
+
+            if (isKiteLinked)
+            {
+                var tokenResult = await JSRuntime.InvokeAsync<KiteTokenResult>("fetchKiteToken");
+                accessToken = tokenResult?.Token ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking Kite status: {ex.Message}");
+        }
+    }
+
+    private void StartFeed()
+    {
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            var tokens = new uint[] { 884737 }; // RELIANCE
+            LiveInterop.Start(accessToken, tokens, OnTick, OnMinute);
+            isFeedStarted = true;
+        }
+    }
+
+    private void StopFeed()
+    {
+        LiveInterop.Stop();
+        isFeedStarted = false;
+    }
+
+    private async Task OnTick(long token, string line)
+    {
+        tickLines.Add(line);
+        if (tickLines.Count > 100)
+        {
+            tickLines.RemoveAt(0);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnMinute(long token, MinuteBar bar)
+    {
+        minuteBars[token] = bar;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (isFeedStarted)
+        {
+            LiveInterop.Stop();
+        }
+    }
+
+    public class KiteMeResult
+    {
+        public string? Email { get; set; }
+        public bool Linked { get; set; }
+    }
+
+    public class KiteTokenResult
+    {
+        public string? Token { get; set; }
+    }
+}

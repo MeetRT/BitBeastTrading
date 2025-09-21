@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "/home/runner/work/BitBeastTrading/BitBeastTrading/src/EquityEdge.Web/wwwroot/css/site.css",
+      "PackagePath": "staticwebassets/css/site.css"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.EquityEdge.Web.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.build.EquityEdge.Web.props",
+      "PackagePath": "build\\EquityEdge.Web.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildMultiTargeting.EquityEdge.Web.props",
+      "PackagePath": "buildMultiTargeting\\EquityEdge.Web.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.EquityEdge.Web.props",
+      "PackagePath": "buildTransitive\\EquityEdge.Web.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
