@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/EquityEdge.Web.props" />
-</Project>
